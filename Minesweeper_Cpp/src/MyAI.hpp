@@ -1,7 +1,7 @@
 // ======================================================================
 // FILE:        MyAI.hpp
 //
-// AUTHOR:      Jian Li
+// AUTHOR:      Eileen Kang, Nicolas Fuller
 //
 // DESCRIPTION: This file contains your agent class, which you will
 //              implement. You are responsible for implementing the
@@ -24,6 +24,7 @@
 #include <iostream> // temporary use
 #include <vector>
 #include <map>
+#include <queue>
 #include <set>
 #include <algorithm>
 
@@ -32,20 +33,27 @@ using namespace std;
 class MyAI : public Agent
 {
 public:
+    /* Provided code cannot be edited */
     MyAI ( int _rowDimension, int _colDimension, int _totalMines, int _agentX, int _agentY );
 
     Action getAction ( int number ) override;
+    /* End of provided code*/
+
+    struct Tile {
+        bool covered = true;
+        bool flagged = false;
+        bool inQueue = false;
+        int label = -1;
+    };
 
 
-    // ======================================================================
-    // YOUR CODE BEGINS
-    // ======================================================================
+    vector<vector<Tile>> internalBoard;
+    queue<Action> actionQueue;
+    set<pair<int, int>> uncoveredTiles; // Set of uncovered tiles to check rules on
 
-
-
-    // ======================================================================
-    // YOUR CODE ENDS
-    // ======================================================================
+    bool isInBounds(int x, int y);
+    vector<pair<int, int>> getNeighbors(int x, int y);
+    void findCertainMoves();
 };
 
 #endif //MINE_SWEEPER_CPP_SHELL_MYAI_HPP
