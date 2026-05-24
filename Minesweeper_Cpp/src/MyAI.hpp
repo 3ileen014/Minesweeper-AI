@@ -54,6 +54,7 @@ public:
     bool isInBounds(int x, int y);
     vector<pair<int, int>> getNeighbors(int x, int y);
     void findCertainMoves();
+    pair<int, int> chooseBestGuess();
 };
 
 #endif //MINE_SWEEPER_CPP_SHELL_MYAI_HPP

@@ -56,12 +56,27 @@ Agent::Action MyAI::getAction( int number )
         return nextAction;
     }
 
-    // Fallback: Pick the first available covered, unflagged tile
+    // smarter guessing
+    pair<int,int> guess = chooseBestGuess();
+
+    if (guess.first != -1) {
+        agentX = guess.first;
+        agentY = guess.second;
+
+        return {UNCOVER, guess.first, guess.second};
+    }
+
+    // last resort random fallback
     for (int x = 0; x < colDimension; ++x) {
         for (int y = 0; y < rowDimension; ++y) {
-            if (internalBoard[x][y].covered && !internalBoard[x][y].flagged && !internalBoard[x][y].inQueue) {
+
+            if (internalBoard[x][y].covered &&
+                !internalBoard[x][y].flagged &&
+                !internalBoard[x][y].inQueue) {
+
                 agentX = x;
                 agentY = y;
+
                 return {UNCOVER, x, y};
             }
         }
@@ -130,4 +145,64 @@ void MyAI::findCertainMoves() {
             }
         }
     }
+}
+
+pair<int,int> MyAI::chooseBestGuess() {
+
+    pair<int,int> best = {-1, -1};
+    double bestRisk = 999999.0;
+
+    for (auto const& pos : uncoveredTiles) {
+        int x = pos.first;
+        int y = pos.second;
+
+        int label = internalBoard[x][y].label;
+
+        vector<pair<int,int>> neighbors = getNeighbors(x, y);
+
+        int flaggedCount = 0;
+        vector<pair<int,int>> coveredNeighbors;
+
+        for (auto const& n : neighbors) {
+            int nx = n.first;
+            int ny = n.second;
+
+            if (internalBoard[nx][ny].flagged) {
+                flaggedCount++;
+            }
+            else if (internalBoard[nx][ny].covered) {
+                coveredNeighbors.push_back(n);
+            }
+        }
+
+        if (coveredNeighbors.empty())
+            continue;
+
+        int remainingMines = label - flaggedCount;
+
+        double risk =
+            (double) remainingMines / coveredNeighbors.size();
+
+        for (auto const& tile : coveredNeighbors) {
+            int tx = tile.first;
+            int ty = tile.second;
+
+            // prefer corners slightly
+            bool corner =
+                (tx == 0 || tx == colDimension - 1) &&
+                (ty == 0 || ty == rowDimension - 1);
+
+            double adjustedRisk = risk;
+
+            if (corner)
+                adjustedRisk -= 0.05;
+
+            if (adjustedRisk < bestRisk) {
+                bestRisk = adjustedRisk;
+                best = tile;
+            }
+        }
+    }
+
+    return best;
 }
