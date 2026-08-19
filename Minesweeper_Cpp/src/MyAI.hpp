@@ -21,12 +21,13 @@
 #define MINE_SWEEPER_CPP_SHELL_MYAI_HPP
 
 #include "Agent.hpp"
-#include <iostream> // temporary use
+#include <iostream>
 #include <vector>
 #include <map>
 #include <queue>
 #include <set>
 #include <algorithm>
+#include <cstdint>
 
 using namespace std;
 
@@ -39,22 +40,65 @@ public:
     Action getAction ( int number ) override;
     /* End of provided code*/
 
-    struct Tile {
+    // Just a simple way to keep track of each tile's info
+    struct TileInfo {
         bool covered = true;
         bool flagged = false;
-        bool inQueue = false;
-        int label = -1;
+        bool alreadyAddedToQueue = false;
+        int mineCount = -1; // the number revealed on the tile
     };
 
+    // A group of tiles that all affect each other
+    struct BoardComponent {
+        vector<pair<int, int>> edgeTiles; // tiles we're trying to figure out
+        vector<pair<int, int>> numbersNearEdge; // the revealed numbers helping us
+        vector<uint64_t> validMineLayouts; // bitmask of where mines could be
+        vector<vector<int>> tileToNumberIndex; // which numbers are next to which tile
+    };
 
-    vector<vector<Tile>> internalBoard;
-    queue<Action> actionQueue;
-    set<pair<int, int>> uncoveredTiles; // Set of uncovered tiles to check rules on
+    vector<vector<TileInfo>> board;
+    queue<Action> thingsToDo;
+    set<pair<int, int>> revealedTiles; 
+    queue<pair<int, int>> tilesToCheck;
+    int flagsPlaced;
 
-    bool isInBounds(int x, int y);
-    vector<pair<int, int>> getNeighbors(int x, int y);
-    void findCertainMoves();
-    pair<int, int> chooseBestGuess();
+    // Helper stuff
+    bool isInside(int x, int y);
+    vector<pair<int, int>> getAdjacent(int x, int y);
+    void findSafeMoves();
+    pair<int, int> makeAGuess();
+
+    // The heavy lifting logic
+    void handleComponents();
+    void groupTilesIntoComponents(vector<BoardComponent>& groups, vector<pair<int, int>>& lonelyTiles);
+    void solveThisGroup(BoardComponent& group, int totalMinesLeft);
+    void tryAllCombinations(BoardComponent& group, int tileIdx, uint64_t maskSoFar, vector<int>& labelsLeft, vector<int>& neighborsLeft, int minesUsedSoFar, int totalMinesLeft);
+    
+    // Math engine for probabilities
+    struct Probabilities {
+        map<pair<int, int>, double> mineProbForTile;
+        double isolatedTileProb;
+        bool isPossible;
+        
+        vector<vector<double>> distributionPerGroup;
+        vector<double> combinedDP;
+        double totalWaysToArrangeBoard;
+    };
+    Probabilities calculateProbs();
+    double combinations(int n, int r); // nCr
+    
+    Probabilities lastCalculatedProbs;
+    
+    vector<BoardComponent> currentGroups;
+    vector<pair<int, int>> currentLonelyTiles;
+    
+    // For tie-breaking when probabilities are the same
+    double calculateBenefit(int tx, int ty, const Probabilities& p);
+    map<int, double> getLikelyLabels(int tx, int ty, const Probabilities& p);
+    int countFutureCertainMoves(int tx, int ty, int possibleLabel);
+
+    bool showDebug = false;
+    void drawBoard();
 };
 
 #endif //MINE_SWEEPER_CPP_SHELL_MYAI_HPP
